@@ -27,8 +27,8 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 // Passport.js config
 const passport = require('passport');
-require('./config/googlePassportStrategy')(passport);
-require('./config/facebookPassportStrategy')(passport);
+require('./config/google-passport-strategy')(passport);
+require('./config/facebook-passport-strategy')(passport);
 app.use(passport.initialize({}));
 
 // Routes
