@@ -1,7 +1,3 @@
-const passport = require('passport');
-const session = require('express-session');
-const FacebookStrategy = require('passport-facebook').Strategy;
-const config = require('../config/constants');
 const sequelize = require('sequelize');
 const jwt = require('jsonwebtoken');
 const db = require('../models');
@@ -56,7 +52,7 @@ exports.login = async (req, res) => {
 
 exports.logout = (req, res) => {
     req.logout();
-    res.send('ok')
+    res.status(200).json({msg: 'OK'})
 };
 
 exports.register = (req, res) => {

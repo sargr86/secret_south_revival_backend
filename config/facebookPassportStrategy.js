@@ -1,4 +1,3 @@
-const config = require('../config/constants');
 const to = require('../helpers/getPromiseResult');
 const db = require('../models');
 const Users = db.users;
@@ -7,8 +6,8 @@ const FacebookStrategy = require('passport-facebook').Strategy;
 // Strategy config
 module.exports = (passport) => {
     passport.use(new FacebookStrategy({
-            clientID: config.FACEBOOK_APP_ID,
-            clientSecret: config.FACEBOOK_APP_SECRET,
+            clientID: process.env.FACEBOOK_APP_ID,
+            clientSecret: process.env.FACEBOOK_APP_SECRET,
             callbackURL: `${process.env.API_URL}auth/facebook/callback`,
             profileFields: ['id', 'emails', 'name']
         },
