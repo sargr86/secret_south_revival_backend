@@ -1,6 +1,7 @@
 // Express Validator
 const {body} = require('express-validator');
-const Users = require('../models/users');
+const db = require('../models');
+const Users = db.users;
 const bcrypt = require('bcryptjs');
 
 const rules = [
@@ -11,12 +12,12 @@ const rules = [
         let pass = req.password;
 
         // Checking email existence & passwords match
-        let found = await Users.findOne({email: email});
+        let found = await Users.findOne({where: {email: email}});
         if (!found) throw new Error('A user with such email doesn\'t exist');
-        let match = await bcrypt.compare(pass, found.password);
+        // let match = await bcrypt.compare(pass, found.password);
 
         // Passwords mismatch case
-        if (!match) throw new Error('Wrong password')
+        // if (!match) throw new Error('Wrong password')
     })
 ];
 
