@@ -14,10 +14,13 @@ const rules = [
         // Checking email existence & passwords match
         let found = await Users.findOne({where: {email: email}});
         if (!found) throw new Error('A user with such email doesn\'t exist');
-        // let match = await bcrypt.compare(pass, found.password);
+        if (found.password) {
 
-        // Passwords mismatch case
-        // if (!match) throw new Error('Wrong password')
+            let match = await bcrypt.compare(pass, found.password);
+
+            // Passwords mismatch case
+            if (!match) throw new Error('Wrong password')
+        } else throw new Error('Password is not set');
     })
 ];
 
