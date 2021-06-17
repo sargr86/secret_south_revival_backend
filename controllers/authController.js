@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const twoFactor = require("node-2fa");
 
 exports.sendVerificationCode = async (req, res) => {
 
@@ -14,27 +15,35 @@ exports.sendVerificationCode = async (req, res) => {
 
     let randomCode = Math.floor(1000 + Math.random() * 9000);
 
+    const newSecret = twoFactor.generateSecret({name: "My Awesome App", account: data.email});
+    const newToken = twoFactor.generateToken(newSecret.secret);
+
     // setup email data with unicode symbols
     let mailOptions = {
         from: '"Secret South " <foo@example.com>',
         to: data.email,
         subject: 'Verification code',
         text: 'Verification code',
-        html: `${randomCode}`
+        html: `${newToken.token}`
     };
 
     // send mail with defined transport object
-    transporter.sendMail(mailOptions, (error, info) => {
+    await transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
             res.status(500).json({msg: error.toString()})
         } else if (info) {
 
             console.log('Message sent: %s', info.messageId);
-            res.json(randomCode);
+            res.json(newToken.token);
         }
 
 
     });
+};
+
+exports.verifyCode = async (req, res) => {
+    const {token} = req.body;
+    twoFactor.verifyToken("XDQXYCP5AC6FA32FQXDGJSPBIDYNKK5W", token);
 };
 
 exports.register = async (req, res) => {
