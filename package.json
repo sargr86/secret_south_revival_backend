@@ -1,0 +1,25 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Node JS (Express JS) sample app",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sargr86/angular12-node-starter-kit-backend.git"
+  },
+  "keywords": [
+    "Angular 12",
+    "Express JS",
+    "Node JS"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sargr86/angular12-node-starter-kit-backend/issues"
+  },
+  "homepage": "https://github.com/sargr86/angular12-node-starter-kit-backend#readme"
+}
