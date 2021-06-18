@@ -23,7 +23,15 @@ exports.sendVerificationCode = async (req, res) => {
     const newSecret = twoFactor.generateSecret({name: "My Awesome App", account: email});
     const t = twoFactor.generateToken(newSecret.secret);
 
-    await AccountVerifications.create({...email, token: t.token});
+    let found = await AccountVerifications.findOne({where: {email: email}});
+
+    if (found) {
+        let d = {secret: newSecret.secret}
+        await AccountVerifications.update(d, {where: {email: email}});
+    } else {
+        await AccountVerifications.create({email: email, secret: newSecret.secret});
+    }
+
 
     // setup email data with unicode symbols
     let mailOptions = {
@@ -46,14 +54,20 @@ exports.sendVerificationCode = async (req, res) => {
 
 
     });
+    res.json();
 };
 
 exports.verifyCode = async (req, res) => {
     const {token, email} = req.body;
 
     let s = await AccountVerifications.findOne({where: {email}});
-    console.log(s)
-    twoFactor.verifyToken(s.secret, token);
+    let t = twoFactor.verifyToken(s.secret, token);
+    let verified = t?.delta === 0;
+    if (verified) {
+        res.send(verified);
+    } else {
+        res.status(500).json({msg: 'The code verification failed'});
+    }
 };
 
 exports.register = async (req, res) => {
