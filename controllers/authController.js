@@ -1,14 +1,17 @@
 const nodemailer = require('nodemailer');
-const twoFactor = require("node-2fa");
 
 const db = require('../models');
 const Users = db.users;
 const AccountVerifications = db.account_verifications;
+const jwt = require('jsonwebtoken');
+const hbs = require('nodemailer-express-handlebars');
 
+const jwtDecode = require('jwt-decode');
 
 exports.sendVerificationCode = async (req, res) => {
 
-    let {email} = req.body;
+    let {email, ...data} = req.body;
+
 
     let transporter = nodemailer.createTransport({
         service: process.env.NODEMAILER_SERVICE,
@@ -18,19 +21,19 @@ exports.sendVerificationCode = async (req, res) => {
         }
     });
 
-    let randomCode = Math.floor(1000 + Math.random() * 9000);
-
-    const newSecret = twoFactor.generateSecret({name: "My Awesome App", account: email});
-    const t = twoFactor.generateToken(newSecret.secret);
-
+    // let randomCode = Math.floor(100000 + Math.random() * 900000);
+    let jwtToken = jwt.sign({email}, 'secret', {expiresIn: "1h"});
+    console.log(jwtToken)
     let found = await AccountVerifications.findOne({where: {email: email}});
 
     if (found) {
-        let d = {secret: newSecret.secret}
+        let d = {secret: jwtToken}
         await AccountVerifications.update(d, {where: {email: email}});
     } else {
-        await AccountVerifications.create({email: email, secret: newSecret.secret});
+        await AccountVerifications.create({email: email, secret: jwtToken});
     }
+
+    await Users.create({...data, email, is_verified: 0});
 
 
     // setup email data with unicode symbols
@@ -39,8 +42,26 @@ exports.sendVerificationCode = async (req, res) => {
         to: email,
         subject: 'Verification code',
         text: 'Verification code',
-        html: `${t.token}`
+        context: {
+            verificationLink: `http://localhost:4200/auth/account-verification?email=${email}&token=${jwtToken}`
+        },
+        template: 'verification'
+        // html: `${jwtToken}`
     };
+
+    transporter.use('compile', hbs({
+        viewEngine: {
+            extName: '.hbs',
+            partialsDir: './public/email_templates/',
+            layoutsDir: './public/email_templates/',
+            defaultLayout: 'verification.hbs',
+        },
+
+        //viewEngine: 'express-handlebars',
+        viewPath: './public/email_templates/',
+        extName: '.hbs',
+
+    }));
 
     // send mail with defined transport object
     await transporter.sendMail(mailOptions, (error, info) => {
@@ -49,29 +70,26 @@ exports.sendVerificationCode = async (req, res) => {
         } else if (info) {
 
             console.log('Message sent: %s', info.messageId);
-            res.json(t.token);
+            res.json(jwtToken);
         }
-
-
     });
-    res.json();
 };
 
 exports.verifyCode = async (req, res) => {
     const {token, email} = req.body;
 
     let s = await AccountVerifications.findOne({where: {email}});
-    let t = twoFactor.verifyToken(s.secret, token);
-    let verified = t?.delta === 0;
+    let verified = s?.secret === token;
+    console.log(s?.secret + '!!!!!' + token, s?.secret === token)
     if (verified) {
-        res.send(verified);
+        this.register(token)
     } else {
         res.status(500).json({msg: 'The code verification failed'});
     }
 };
 
-exports.register = async (req, res) => {
-
+exports.register = async (token) => {
+    console.log(jwtDecode(token))
 };
 
 
