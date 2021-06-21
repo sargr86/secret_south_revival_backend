@@ -9,50 +9,27 @@ const jwt = require('jsonwebtoken');
 const hbs = require('nodemailer-express-handlebars');
 const bcrypt = require('bcryptjs');
 
+const c = require('../config/constants');
+const generateMailOptions = require('../helpers/generateMailOptions');
+
 
 exports.sendVerificationCode = async (req, res) => {
 
     let {email, ...data} = req.body;
 
-    let transporter = nodemailer.createTransport({
-        service: process.env.NODEMAILER_SERVICE,
-        auth: {
-            user: process.env.NODEMAILER_USER,
-            pass: process.env.NODEMAILER_PASS
-        }
-    });
+    let transporter = nodemailer.createTransport(c.NODEMAILER_TRANSPORT_SETTINGS);
 
-    // let randomCode = Math.floor(100000 + Math.random() * 900000);
     let jwtToken = jwt.sign({email}, 'secret', {expiresIn: "1h"});
 
     this.saveToken(jwtToken, {email});
     this.register(data, {email});
 
+    // e-mail template settings
+    transporter.use('compile', hbs(c.EMAIL_HBS_SETTINGS));
 
     // setup email data with unicode symbols
-    let mailOptions = {
-        from: '"Secret South " <foo@example.com>',
-        to: email,
-        subject: 'Verification code',
-        text: 'Verification code',
-        context: {
-            verificationLink: `${process.env.FRONTEND_URL}/auth/account-verification?email=${email}&token=${jwtToken}`
-        },
-        template: 'verification'
-    };
-
-    // e-mail template settings
-    transporter.use('compile', hbs({
-        viewEngine: {
-            extName: '.hbs',
-            partialsDir: './public/email_templates/',
-            layoutsDir: './public/email_templates/',
-            defaultLayout: 'verification.hbs',
-        },
-
-        viewPath: './public/email_templates/',
-        extName: '.hbs',
-    }));
+    let mailOptions = generateMailOptions(email, jwtToken, 'Account verification code',
+        'verification', {verificationLink: `${process.env.FRONTEND_URL}/auth/account-verification?email=${email}&token=${jwtToken}`});
 
     // send mail with defined transport object
     await transporter.sendMail(mailOptions, (error, info) => {
@@ -82,7 +59,6 @@ exports.verifyCode = async (req, res) => {
     let s = await AccountVerifications.findOne({where: {email}});
     let verified = s?.secret === token;
 
-    console.log(s?.secret + '!!!!!' + token, s?.secret === token)
     if (verified) {
         let status = await UserStatuses.findOne({where: {name: 'active'}});
         await Users.update({status_id: status.id}, {where: {email}})
