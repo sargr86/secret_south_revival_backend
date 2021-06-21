@@ -2,16 +2,17 @@ const nodemailer = require('nodemailer');
 
 const db = require('../models');
 const Users = db.users;
+const UserStatuses = db.user_statuses;
 const AccountVerifications = db.account_verifications;
+
 const jwt = require('jsonwebtoken');
 const hbs = require('nodemailer-express-handlebars');
+const bcrypt = require('bcryptjs');
 
-const jwtDecode = require('jwt-decode');
 
 exports.sendVerificationCode = async (req, res) => {
 
     let {email, ...data} = req.body;
-
 
     let transporter = nodemailer.createTransport({
         service: process.env.NODEMAILER_SERVICE,
@@ -23,17 +24,9 @@ exports.sendVerificationCode = async (req, res) => {
 
     // let randomCode = Math.floor(100000 + Math.random() * 900000);
     let jwtToken = jwt.sign({email}, 'secret', {expiresIn: "1h"});
-    console.log(jwtToken)
-    let found = await AccountVerifications.findOne({where: {email: email}});
 
-    if (found) {
-        let d = {secret: jwtToken}
-        await AccountVerifications.update(d, {where: {email: email}});
-    } else {
-        await AccountVerifications.create({email: email, secret: jwtToken});
-    }
-
-    await Users.create({...data, email, is_verified: 0});
+    this.saveToken(jwtToken, {email});
+    this.register(data, {email});
 
 
     // setup email data with unicode symbols
@@ -43,12 +36,12 @@ exports.sendVerificationCode = async (req, res) => {
         subject: 'Verification code',
         text: 'Verification code',
         context: {
-            verificationLink: `http://localhost:4200/auth/account-verification?email=${email}&token=${jwtToken}`
+            verificationLink: `${process.env.FRONTEND_URL}/auth/account-verification?email=${email}&token=${jwtToken}`
         },
         template: 'verification'
-        // html: `${jwtToken}`
     };
 
+    // e-mail template settings
     transporter.use('compile', hbs({
         viewEngine: {
             extName: '.hbs',
@@ -57,10 +50,8 @@ exports.sendVerificationCode = async (req, res) => {
             defaultLayout: 'verification.hbs',
         },
 
-        //viewEngine: 'express-handlebars',
         viewPath: './public/email_templates/',
         extName: '.hbs',
-
     }));
 
     // send mail with defined transport object
@@ -75,21 +66,42 @@ exports.sendVerificationCode = async (req, res) => {
     });
 };
 
+exports.saveToken = async (jwtToken, email) => {
+    let found = await AccountVerifications.findOne({where: email});
+
+    if (found) {
+        await AccountVerifications.update({secret: jwtToken}, {where: email});
+    } else {
+        await AccountVerifications.create({...email, secret: jwtToken});
+    }
+};
+
 exports.verifyCode = async (req, res) => {
     const {token, email} = req.body;
 
     let s = await AccountVerifications.findOne({where: {email}});
     let verified = s?.secret === token;
+
     console.log(s?.secret + '!!!!!' + token, s?.secret === token)
     if (verified) {
-        this.register(token)
+        let status = await UserStatuses.findOne({where: {name: 'active'}});
+        await Users.update({status_id: status.id}, {where: {email}})
     } else {
         res.status(500).json({msg: 'The code verification failed'});
     }
 };
 
-exports.register = async (token) => {
-    console.log(jwtDecode(token))
+exports.register = async (data, email) => {
+
+    // Saving the original password of user and hashing it to save in db
+    let originalPass = data.password;
+    data.password = bcrypt.hashSync(originalPass, 10);
+
+    // Getting 'not-verified' status to assign it to the user
+    let status = await UserStatuses.findOne({where: {name: 'not verified'}});
+
+    await Users.create({...data, ...email, status_id: status.id});
+
 };
 
 
