@@ -1,46 +1,47 @@
-const nodemailer = require('nodemailer');
-
 const db = require('../models');
 const Users = db.users;
 const UserStatuses = db.user_statuses;
 const AccountVerifications = db.account_verifications;
 
+const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const hbs = require('nodemailer-express-handlebars');
 const bcrypt = require('bcryptjs');
+const sequelize = require('sequelize');
 
 const c = require('../config/constants');
+const showIfErrors = require('../helpers/showIfErrors');
 const generateMailOptions = require('../helpers/generateMailOptions');
-
 
 exports.sendVerificationCode = async (req, res) => {
 
-    let {email, ...data} = req.body;
+    if (!showIfErrors(req, res)) {
 
-    let transporter = nodemailer.createTransport(c.NODEMAILER_TRANSPORT_SETTINGS);
+        let {email, ...data} = req.body;
+        let transporter = nodemailer.createTransport(c.NODEMAILER_TRANSPORT_SETTINGS);
+        let jwtToken = jwt.sign({email}, 'secret', {expiresIn: "1h"});
 
-    let jwtToken = jwt.sign({email}, 'secret', {expiresIn: "1h"});
+        this.saveToken(jwtToken, {email});
+        this.register(data, {email});
 
-    this.saveToken(jwtToken, {email});
-    this.register(data, {email});
+        // e-mail template settings
+        transporter.use('compile', hbs(c.EMAIL_HBS_SETTINGS));
 
-    // e-mail template settings
-    transporter.use('compile', hbs(c.EMAIL_HBS_SETTINGS));
+        // setup email data with unicode symbols
+        let mailOptions = generateMailOptions(email, jwtToken, 'Account verification code',
+            'verification', {verificationLink: `${process.env.FRONTEND_URL}/auth/account-verification?email=${email}&token=${jwtToken}`});
 
-    // setup email data with unicode symbols
-    let mailOptions = generateMailOptions(email, jwtToken, 'Account verification code',
-        'verification', {verificationLink: `${process.env.FRONTEND_URL}/auth/account-verification?email=${email}&token=${jwtToken}`});
+        // send mail with defined transport object
+        await transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                res.status(500).json({msg: error.toString()})
+            } else if (info) {
 
-    // send mail with defined transport object
-    await transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            res.status(500).json({msg: error.toString()})
-        } else if (info) {
-
-            console.log('Message sent: %s', info.messageId);
-            res.json(jwtToken);
-        }
-    });
+                console.log('Message sent: %s', info.messageId);
+                res.json(jwtToken);
+            }
+        });
+    }
 };
 
 exports.saveToken = async (jwtToken, email) => {
@@ -61,7 +62,15 @@ exports.verifyCode = async (req, res) => {
 
     if (verified) {
         let status = await UserStatuses.findOne({where: {name: 'active'}});
-        await Users.update({status_id: status.id}, {where: {email}})
+        // await Users.update({status_id: status.id}, {where: {email}});
+
+        let user = await Users.findOne({where: {email}, attributes: ['password', 'id']});
+        user.isNewRecord = false;
+        user.set({status_id: status.id});
+        await user.save();
+        req.body.password = user.password;
+
+        this.login(req, res);
     } else {
         res.status(500).json({msg: 'The code verification failed'});
     }
@@ -83,4 +92,33 @@ exports.register = async (data, email) => {
 
 exports.login = async (req, res) => {
 
+    if (!showIfErrors(req, res)) {
+
+        let {email} = req.body;
+        let attributes = [`first_name`, 'email', 'birthday', 'avatar', 'cover', 'password', 'id', 'status_id'];
+
+        // Active status selecting
+        let statusWhere = sequelize.where(sequelize.col('`user_status`.`name`'), 'active');
+
+        // Selecting an employee that has an email matching request one
+        let user = await Users.findOne({
+            attributes: attributes,
+            include: [{model: UserStatuses, attributes: ['name'], where: statusWhere}],
+            where: {email}
+        }, res);
+
+        if (!res.headersSent) {
+
+
+            // User is not active
+            if (!user) res.status(500).json({msg: 'You don\'t have such privileges or the account is inactive'});
+
+            else {
+                res.status(200).json({
+                    token: jwt.sign(user.toJSON(), 'secretkey', {expiresIn: '8h'}),
+                    full_name: user.full_name
+                })
+            }
+        }
+    }
 };
