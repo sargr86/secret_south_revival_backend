@@ -19,7 +19,7 @@ exports.sendVerificationCode = async (req, res) => {
 
         let {email, ...data} = req.body;
         let transporter = nodemailer.createTransport(c.NODEMAILER_TRANSPORT_SETTINGS);
-        let jwtToken = jwt.sign({email}, 'secret', {expiresIn: "1h"});
+        let jwtToken = jwt.sign({email}, 'secret', {expiresIn: 1200});
 
         this.saveToken(jwtToken, {email});
         this.register(data, {email});
@@ -62,7 +62,6 @@ exports.verifyCode = async (req, res) => {
 
     if (verified) {
         let status = await UserStatuses.findOne({where: {name: 'active'}});
-        // await Users.update({status_id: status.id}, {where: {email}});
 
         let user = await Users.findOne({where: {email}, attributes: ['password', 'id']});
         user.isNewRecord = false;
@@ -89,13 +88,12 @@ exports.register = async (data, email) => {
 
 };
 
-
 exports.login = async (req, res) => {
 
     if (!showIfErrors(req, res)) {
 
         let {email} = req.body;
-        let attributes = [`first_name`, 'email', 'birthday', 'avatar', 'cover', 'password', 'id', 'status_id'];
+        let attributes = [`first_name`, `last_name`, 'email', 'birthday', 'avatar', 'cover', 'password', 'id', 'status_id'];
 
         // Active status selecting
         let statusWhere = sequelize.where(sequelize.col('`user_status`.`name`'), 'active');
@@ -109,16 +107,24 @@ exports.login = async (req, res) => {
 
         if (!res.headersSent) {
 
-
             // User is not active
             if (!user) res.status(500).json({msg: 'You don\'t have such privileges or the account is inactive'});
 
             else {
                 res.status(200).json({
                     token: jwt.sign(user.toJSON(), 'secretkey', {expiresIn: '8h'}),
-                    full_name: user.full_name
+                    full_name: `${user.first_name} ${user.last_name}`
                 })
             }
         }
+    }
+};
+
+exports.sendForgotPassEmail = async (req, res) => {
+    if (!showIfErrors(req, res)) {
+
+        let {email} = req.body;
+        let transporter = nodemailer.createTransport(c.NODEMAILER_TRANSPORT_SETTINGS);
+        let jwtToken = jwt.sign({email}, 'secret', {expiresIn: 1200});
     }
 };
