@@ -172,6 +172,4 @@ exports.resetPassword = async (req, res) => {
         await to(Users.update({password: data.password}, {where: {email: data.email}}), res);
         this.login(req, res);
     }
-
-
 };
