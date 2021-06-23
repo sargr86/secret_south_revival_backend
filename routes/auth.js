@@ -4,6 +4,7 @@ const authController = require('../controllers/authController');
 const validateRegister = require('../validators/validateRegister');
 const validateLogin = require('../validators/validateLogin');
 const validateVerificationCode = require('../validators/validateVerificationCode');
+const validateResetPass = require('../validators/validateResetPass');
 
 router.post('/send-verification-code', validateRegister.rules, authController.sendVerificationCode);
 router.post('/verify-code', validateVerificationCode.rules, authController.verifyCode);
