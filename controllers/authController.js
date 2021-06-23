@@ -2,6 +2,7 @@ const db = require('../models');
 const Users = db.users;
 const UserStatuses = db.user_statuses;
 const AccountVerifications = db.account_verifications;
+const ForgotPassTokens = db.forgot_pass_tokens;
 
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
@@ -12,6 +13,7 @@ const sequelize = require('sequelize');
 const c = require('../config/constants');
 const showIfErrors = require('../helpers/showIfErrors');
 const generateMailOptions = require('../helpers/generateMailOptions');
+const to = require('../helpers/getPromiseResult');
 
 exports.sendVerificationCode = async (req, res) => {
 
@@ -124,7 +126,52 @@ exports.sendForgotPassEmail = async (req, res) => {
     if (!showIfErrors(req, res)) {
 
         let {email} = req.body;
+        let user = await Users.findOne({where: {email}});
         let transporter = nodemailer.createTransport(c.NODEMAILER_TRANSPORT_SETTINGS);
         let jwtToken = jwt.sign({email}, 'secret', {expiresIn: 1200});
+
+        this.saveForgotPassToken(jwtToken, {user_id: user.id});
+
+        // e-mail template settings
+        transporter.use('compile', hbs(c.FORGOT_PASS_EMAIL_HBS_SETTINGS));
+
+        // setup email data with unicode symbols
+        let mailOptions = generateMailOptions(email, jwtToken, 'Reset password',
+            'forgot-password', {verificationLink: `${process.env.FRONTEND_URL}/auth/reset-password?email=${email}&token=${jwtToken}`});
+
+        // send mail with defined transport object
+        await transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                res.status(500).json({msg: error.toString()})
+            } else if (info) {
+
+                console.log('Message sent: %s', info.messageId);
+                res.json(jwtToken);
+            }
+        });
+
     }
+};
+
+exports.saveForgotPassToken = async (jwtToken, user_id) => {
+    let found = await ForgotPassTokens.findOne({where: user_id});
+
+    if (found) {
+        await ForgotPassTokens.update({token: jwtToken}, {where: user_id});
+    } else {
+        await ForgotPassTokens.create({...user_id, token: jwtToken});
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    let data = req.body;
+    let newPassword = data.password;
+    if (!showIfErrors(req, res)) {
+        data.password = bcrypt.hashSync(newPassword, 10);
+
+        await to(Users.update({password: data.password}, {where: {email: data.email}}), res);
+        this.login(req, res);
+    }
+
+
 };

@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
         sequelize,
         modelName: 'account_verifications',
         createdAt: 'created_at',
-        updatedAt: 'updated_at',
+        updatedAt: 'updated_at'
     });
     return account_verifications;
 };
