@@ -12,7 +12,8 @@ module.exports = {
             user: process.env.NODEMAILER_USER,
             pass: process.env.NODEMAILER_PASS
         }
-    }
+    },
+    UPLOAD_MAX_FILE_SIZE: 2 * 1024 * 1024,
 };
 
 

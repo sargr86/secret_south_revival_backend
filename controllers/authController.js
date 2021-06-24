@@ -11,39 +11,55 @@ const bcrypt = require('bcryptjs');
 const sequelize = require('sequelize');
 
 const c = require('../config/constants');
+const m = require('../config/multer');
 const showIfErrors = require('../helpers/showIfErrors');
 const generateMailOptions = require('../helpers/generateMailOptions');
 const to = require('../helpers/getPromiseResult');
 
 exports.sendVerificationCode = async (req, res) => {
+    let {email, gender, ...data} = req.body;
 
-    if (!showIfErrors(req, res)) {
+    m.uploadAvatar(req, res, async (err) => {
 
-        let {email, ...data} = req.body;
-        let transporter = nodemailer.createTransport(c.NODEMAILER_TRANSPORT_SETTINGS);
-        let jwtToken = jwt.sign({email}, 'secret', {expiresIn: 1200});
+        // Gets file type validation error
+        if (req.fileTypeError) {
+            res.status(423).json(req.fileTypeError);
+        }
 
-        this.saveToken(jwtToken, {email});
-        this.register(data, {email});
+        // Getting multer errors if any
+        else if (err) res.status(423).json(err);
 
-        // e-mail template settings
-        transporter.use('compile', hbs(c.EMAIL_HBS_SETTINGS));
+        // If file validation passed, heading to the request data validation
+        else {
 
-        // setup email data with unicode symbols
-        let mailOptions = generateMailOptions(email, jwtToken, 'Account verification code',
-            'verification', {verificationLink: `${process.env.FRONTEND_URL}/auth/account-verification?email=${email}&token=${jwtToken}`});
+            if (!showIfErrors(req, res)) {
+                let transporter = nodemailer.createTransport(c.NODEMAILER_TRANSPORT_SETTINGS);
+                let jwtToken = jwt.sign({email}, 'secret', {expiresIn: 1200});
+                gender = +(gender === 'female');
 
-        // send mail with defined transport object
-        await transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                res.status(500).json({msg: error.toString()})
-            } else if (info) {
+                this.saveToken(jwtToken, {email});
+                this.register(data, {email, gender});
 
-                console.log('Message sent: %s', info.messageId);
-                res.json(jwtToken);
+                // e-mail template settings
+                transporter.use('compile', hbs(c.EMAIL_HBS_SETTINGS));
+
+                // setup email data with unicode symbols
+                let mailOptions = generateMailOptions(email, jwtToken, 'Account verification code',
+                    'verification', {verificationLink: `${process.env.FRONTEND_URL}/auth/account-verification?email=${email}&token=${jwtToken}`});
+
+                // send mail with defined transport object
+                await transporter.sendMail(mailOptions, (error, info) => {
+                    if (error) {
+                        res.status(500).json({msg: error.toString()})
+                    } else if (info) {
+
+                        console.log('Message sent: %s', info.messageId);
+                        res.json(jwtToken);
+                    }
+                });
             }
-        });
-    }
+        }
+    })
 };
 
 exports.saveToken = async (jwtToken, email) => {
