@@ -37,7 +37,7 @@ exports.sendVerificationCode = async (req, res) => {
                 let jwtToken = jwt.sign({email}, 'secret', {expiresIn: 1200});
                 gender = +(gender === 'female');
 
-                this.saveToken(jwtToken, {email});
+                await this.saveToken(jwtToken, {email});
                 this.register(data, {email, gender});
 
                 // e-mail template settings
@@ -117,11 +117,11 @@ exports.login = async (req, res) => {
         let statusWhere = sequelize.where(sequelize.col('`user_status`.`name`'), 'active');
 
         // Selecting an employee that has an email matching request one
-        let user = await Users.findOne({
+        let user = await to(Users.findOne({
             attributes: attributes,
             include: [{model: UserStatuses, attributes: ['name'], where: statusWhere}],
             where: {email}
-        }, res);
+        }), res);
 
         if (!res.headersSent) {
 
