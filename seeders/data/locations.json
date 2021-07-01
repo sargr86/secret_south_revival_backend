@@ -1,0 +1,49 @@
+{
+  "locations": [
+    {
+      "name": "Aghada",
+      "latitude": 51.845922,
+      "longitude": -8.209558
+    },
+    {
+      "name": "Crosshaven",
+      "latitude": 51.804713,
+      "longitude": -8.298334
+    },
+    {
+      "name": "Fountainstown",
+      "latitude": 51.775695,
+      "longitude": -8.311389
+    },
+    {
+      "name": "Cobh",
+      "latitude": 51.848841,
+      "longitude": -8.297425
+    },
+    {
+      "name": "Monkstown",
+      "latitude": 51.849744,
+      "longitude": -8.331090
+    },
+    {
+      "name": "Passage West",
+      "latitude": 51.871874,
+      "longitude": -8.335133
+    },
+    {
+      "name": "Cork",
+      "latitude": 51.898662,
+      "longitude": -8.462863
+    },
+    {
+      "name": "Ballycotton",
+      "latitude": 51.828334,
+      "longitude": -8.000764
+    },
+    {
+      "name": "Kinsale",
+      "latitude": 51.700771,
+      "longitude": -8.517872
+    }
+  ]
+}
