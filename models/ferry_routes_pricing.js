@@ -1,0 +1,32 @@
+'use strict';
+const {
+  Model
+} = require('sequelize');
+module.exports = (sequelize, DataTypes) => {
+  class ferry_routes_pricing extends Model {
+    /**
+     * Helper method for defining associations.
+     * This method is not a part of Sequelize lifecycle.
+     * The `models/index` file will call this method automatically.
+     */
+    static associate(models) {
+      // define association here
+    }
+  };
+  ferry_routes_pricing.init({
+    name: DataTypes.STRING,
+    start_point: DataTypes.STRING,
+    stop_1: DataTypes.STRING,
+    stop_2: DataTypes.STRING,
+    end_point: DataTypes.STRING,
+    single: DataTypes.INTEGER,
+    return: DataTypes.INTEGER,
+    total: DataTypes.INTEGER
+  }, {
+    sequelize,
+    modelName: 'ferry_routes_pricing',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+  });
+  return ferry_routes_pricing;
+};
