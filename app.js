@@ -42,7 +42,7 @@ app.get('*', (req, res, next) => {
     if (!req.url.includes('phpmyadmin')) {
         res.sendFile(dist + 'index.html');
     } else {
-        res.status(404).send('Not found');
+        res.status(404).send('Route is found');
     }
 });
 
