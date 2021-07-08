@@ -16,6 +16,7 @@ const showIfErrors = require('../helpers/showIfErrors');
 const generateMailOptions = require('../helpers/generateMailOptions');
 const to = require('../helpers/getPromiseResult');
 
+
 exports.sendVerificationCode = async (req, res) => {
     let {email, gender, ...data} = req.body;
 
