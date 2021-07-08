@@ -1,5 +1,5 @@
-@import '../../../../../frontend/node_modules/ngx-toastr/toastr.css';
-@import 'assets/styles/dropzone-custom';
+@import '~ngx-toastr/toastr';
+@import 'dropzone-custom';
 
 html, body, p, h1, h2, h3, h4, ul {
   margin: 0;
