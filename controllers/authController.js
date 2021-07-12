@@ -112,7 +112,7 @@ exports.login = async (req, res) => {
     if (!showIfErrors(req, res)) {
 
         let {email} = req.body;
-        let attributes = [`first_name`, `last_name`, 'email', 'birthday', 'avatar', 'cover', 'password', 'id', 'status_id'];
+        let attributes = [`first_name`, `last_name`, 'email', 'birthday', 'avatar', 'cover', 'id', 'status_id'];
 
         // Active status selecting
         let statusWhere = sequelize.where(sequelize.col('`user_status`.`name`'), 'active');
